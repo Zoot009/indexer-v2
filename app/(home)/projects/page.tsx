@@ -1,15 +1,13 @@
-
 import CreateProjectDialog from "@/components/project/create-project";
 import ProjectCard from "@/components/project/project-card";
 import prisma from "@/lib/prisma";
 
 export default async function TestRedisPage() {
   const projects = await prisma.project.findMany({
-    include: {
+    include:{
       urls: true
     }
   });
-  
   return (
     <>
       <div className="flex justify-between items-center mb-6">
@@ -30,7 +28,7 @@ export default async function TestRedisPage() {
             urlCount={project.urls.length}
             indexedCount={project.urls.filter(url => url.isIndexed).length}
           />
-        ))}  
+        ))}
       </div>
     </>
   );

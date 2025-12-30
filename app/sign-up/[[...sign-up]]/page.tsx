@@ -2,59 +2,67 @@ import { SignUp } from '@clerk/nextjs';
 
 export default function SignUpPage() {
   return (
-    <div className="flex min-h-screen">
-      {/* Left side - Sign Up Form */}
-      <div className="flex w-full lg:w-1/2 items-center justify-center bg-black p-8">
-        <div className="w-full max-w-md">
-          <SignUp 
+    <div className="flex min-h-screen bg-background text-foreground">
+      {/* Left side - Sign Up Form (Neobrutalist) */}
+      <div className="flex w-full lg:w-1/2 items-center justify-center p-8 bg-[var(--color-secondary-background)]">
+        <div
+          className="w-full max-w-md border-4 border-black dark:border-white rounded-none p-6"
+          style={{ boxShadow: 'var(--shadow)' }}
+        >
+          <SignUp
             appearance={{
               baseTheme: undefined,
               elements: {
-                rootBox: "w-full",
-                card: "bg-black shadow-none border-0",
-                headerTitle: "text-white text-2xl font-semibold",
-                headerSubtitle: "text-gray-400 text-sm",
-                socialButtonsBlockButton: "bg-gray-900 border-gray-800 text-white hover:bg-gray-800",
-                socialButtonsBlockButtonText: "text-white font-normal",
-                formFieldLabel: "text-white text-sm",
-                formFieldInput: "bg-gray-900 border-gray-800 text-white placeholder:text-gray-500 focus:ring-emerald-500 focus:border-emerald-500",
-                formButtonPrimary: "bg-emerald-500 hover:bg-emerald-600 text-white normal-case shadow-none",
-                footerActionLink: "text-emerald-500 hover:text-emerald-400",
-                identityPreviewText: "text-white",
-                identityPreviewEditButton: "text-emerald-500",
-                formFieldInputShowPasswordButton: "text-gray-400 hover:text-white",
-                formFieldAction: "text-emerald-500 hover:text-emerald-400",
-                footer: "hidden",
-                dividerLine: "bg-gray-800",
-                dividerText: "text-gray-400",
-                formFieldSuccessText: "text-emerald-400",
-                formFieldErrorText: "text-red-400",
-                identityPreviewEditButtonIcon: "text-emerald-500",
-                formHeaderTitle: "text-white",
-                formHeaderSubtitle: "text-gray-400",
-                otpCodeFieldInput: "bg-gray-900 border-gray-800 text-white",
-                formResendCodeLink: "text-emerald-500 hover:text-emerald-400",
-                footerActionText: "text-gray-400",
-              },
+                rootBox: 'w-full',
+                card: 'bg-[var(--color-secondary-background)] shadow-none border-0 rounded-none',
+                headerTitle: 'text-foreground text-3xl font-bold',
+                headerSubtitle: 'text-muted-foreground text-sm',
+                socialButtonsBlockButton:
+                  'bg-background text-foreground border-4 border-black dark:border-white rounded-none hover:bg-[var(--color-secondary-background)]',
+                socialButtonsBlockButtonText: 'text-foreground font-normal',
+                dividerLine: 'bg-black dark:bg-white',
+                dividerText: 'text-muted-foreground',
+                formFieldLabel: 'text-foreground text-sm',
+                formFieldInput:
+                  'bg-background text-foreground placeholder:text-muted-foreground border-4 border-black dark:border-white rounded-none focus:ring-[var(--color-ring)] focus:border-[var(--color-ring)]',
+                otpCodeFieldInput:
+                  'bg-background text-foreground border-4 border-black dark:border-white rounded-none',
+                formFieldSuccessText: 'text-[var(--color-main)]',
+                formFieldErrorText: 'text-red-500',
+                formHeaderTitle: 'text-foreground',
+                formHeaderSubtitle: 'text-muted-foreground',
+                formResendCodeLink:
+                  'text-[var(--color-main)] hover:opacity-90',
+                formFieldAction: 'text-[var(--color-main)] hover:opacity-90',
+                formFieldInputShowPasswordButton: 'text-muted-foreground hover:text-foreground',
+                identityPreviewText: 'text-foreground',
+                identityPreviewEditButton: 'text-[var(--color-main)]',
+                identityPreviewEditButtonIcon: 'text-[var(--color-main)]',
+                footerActionText: 'text-muted-foreground',
+                footerActionLink:
+                  'text-[var(--color-main)] hover:opacity-90',
+                formButtonPrimary:
+                  'normal-case bg-[var(--color-main)] text-[var(--color-main-foreground)] border-4 border-black dark:border-white rounded-none shadow-none transition-transform hover:translate-x-[2px] hover:translate-y-[2px]'
+              }
             }}
           />
         </div>
       </div>
 
-      {/* Right side - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-teal-700 items-center justify-center p-12">
-        <div className="text-center">
-          <div className="flex items-center justify-center mb-8">
-            <div className="flex items-center gap-2">
-              <div className="w-16 h-16 rounded-full bg-teal-600 flex items-center justify-center">
-                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      {/* Right side - Branding (Neobrutalist) */}
+      <div className="hidden lg:flex lg:w-1/2 items-center justify-center p-12 bg-[var(--color-main)] text-[var(--color-main-foreground)] border-l-4 border-black dark:border-white" style={{ boxShadow: 'var(--shadow)' }}>
+        <div className="text-center max-w-lg">
+          <div className="flex items-center justify-center mb-10">
+            <div className="flex items-center gap-3">
+              <div className="w-16 h-16 bg-[var(--color-secondary-background)] border-4 border-black dark:border-white flex items-center justify-center -rotate-6" style={{ boxShadow: 'var(--shadow)' }}>
+                <svg className="w-10 h-10 text-black dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h1 className="text-6xl font-bold text-white">InDeXeR</h1>
+              <h1 className="text-5xl font-bold tracking-tight">InDeXeR</h1>
             </div>
           </div>
-          <p className="text-teal-200 text-xl max-w-md mx-auto">
+          <p className="text-lg">
             Create an account to start managing your projects efficiently.
           </p>
         </div>

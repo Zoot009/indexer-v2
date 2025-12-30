@@ -23,8 +23,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Plus } from "lucide-react"
-import { createProject } from "@/app/(home)/projects/actions"
-
+import { createProject } from "@/actions/create-project"
 const CreateProjectDialog = () => {
   const [open, setOpen] = useState(false)
 

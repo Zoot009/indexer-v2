@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import logo from "@/public/favicon-32x32.png"
 import {
   BookOpen,
   Bot,
@@ -26,6 +27,7 @@ import {
 import { NavUser } from "./nav-user"
 import { NavMain } from "./nav-main"
 import { NavProjects } from "./nav-project"
+import Image from "next/image"
 
 const data = {
   user: {
@@ -159,12 +161,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
               <a href="#">
-                <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-                  <Command className="size-4" />
+                <div className="font-extrabold text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
+                  <Image
+                    src={logo}
+                    alt="InDeXeR Logo"
+                    className="h-8 w-8"
+                  />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">Acme Inc</span>
-                  <span className="truncate text-xs">Enterprise</span>
+                  <span className="truncate font-medium">InDeXeR</span>
+                  <span className="truncate text-xs">SEO Tool</span>
                 </div>
               </a>
             </SidebarMenuButton>
