@@ -6,7 +6,6 @@ import prisma from "@/lib/prisma";
 export interface ProjectDetails {
   id: string;
   name: string;
-  isArchived: boolean;
   createdAt: Date;
   updatedAt: Date;
   status: ProjectStatus;

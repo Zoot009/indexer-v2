@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ui/theme-provider";
 import { ClerkProvider } from "@clerk/nextjs";
+import { Toaster } from "@/components/ui/sonner";
 
 const inter = Inter({
   variable: "--font-sans",
@@ -38,6 +39,10 @@ export default function RootLayout({
           >
             {children}
           </ThemeProvider>
+          <Toaster
+            position="bottom-right"
+            richColors
+          />
         </body>
       </html>
     </ClerkProvider>

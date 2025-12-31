@@ -2,6 +2,7 @@
 
 import { getProjectDetails, ProjectDetails } from '@/actions/get-project-details'
 import { ImportTab } from '@/components/project/import-section';
+import { UrlsTable } from '@/components/project/urls-table';
 import { Button } from '@/components/ui/button'
 import { ProjectStatus } from '@/lib/generated/prisma';
 import { Download, Import, ImportIcon, Play } from 'lucide-react';
@@ -10,12 +11,12 @@ import { useEffect, useState } from 'react';
 
 const ProjectPage = () => {
   const [projectDetails, setProjectDetails] =  useState<ProjectDetails | null>(null);
+
   const params = useParams<{id: string}>();
   
   const fetchProjectDetails = async() => {
     if (params.id) {
       const details = await getProjectDetails(params.id);
-      console.log("Project Name:", details?.name);
       setProjectDetails(details || null);
     }
   }
@@ -29,7 +30,7 @@ const ProjectPage = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold">{projectDetails?.name ? projectDetails.name : "Loading..."}</h1>
+          <h1 className="text-3xl font-extrabold">{projectDetails?.name ? projectDetails.name : "Loading..."}</h1>
           <p className="text-muted-foreground text-sm">Manage your project URLs and imports</p>  
         </div>  
         <div className="flex gap-2">
@@ -39,9 +40,13 @@ const ProjectPage = () => {
         </div>
       </div>
       <div className="">
-        <ImportTab
-          projectId={params.id!}
-        />
+        {
+          projectDetails?.status === ProjectStatus.IDLE ? (
+            <ImportTab projectId={params.id!} onImportComplete={fetchProjectDetails} />
+          ) : (
+            <UrlsTable projectId={params.id!}/>
+          )
+        }
       </div>
     </div>
   )

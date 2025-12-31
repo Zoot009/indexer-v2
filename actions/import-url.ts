@@ -48,6 +48,11 @@ export async function importUrls(
 			skipDuplicates: true,
 		});
 
+		await prisma.project.update({
+			where: { id: projectId },
+			data: { status: "IMPORTED" },
+		})
+
 		// Revalidate the project details page
 		revalidatePath(`/projects/${projectId}`);
 

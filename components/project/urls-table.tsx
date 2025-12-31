@@ -11,8 +11,11 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, RefreshCw, Trash2 } from "lucide-react";
+import { ExternalLink, RefreshCw, Trash2, Loader2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { useCallback, useEffect, useState } from "react";
+import { getProjectUrls, ProjectUrls } from "@/actions/get-project-urls";
+import { toast } from "sonner";
 
 interface Url {
   id: string;
@@ -26,11 +29,41 @@ interface Url {
 }
 
 interface UrlsTableProps {
-  urls: Url[];
   projectId: string;
 }
 
-export function UrlsTable({ urls, projectId }: UrlsTableProps) {
+export function UrlsTable({ projectId }: UrlsTableProps) {
+  const [projectUrls, setProjectUrls] = useState<ProjectUrls[]>([]);
+  const [total, setTotal] = useState(0);
+  const [totalIndexed, setTotalIndexed] = useState(0);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+  const [loading, setLoading] = useState(false);
+
+  const fetchUrls = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await getProjectUrls(projectId, page, pageSize);
+      if (!response.success || !response.data) {
+        console.error("Failed to fetch project URLs:", response.error);
+        return;
+      }
+      setProjectUrls(response.data.items);
+      setTotal(response.data.total);
+      setTotalIndexed(response.data.totalIndexed);
+    } catch (error) {
+      toast.error("Failed to fetch project URLs");
+      console.error("Error fetching project URLs:", error);
+    }
+    finally {
+      setLoading(false);
+    }
+  }, [projectId, page, pageSize]);
+
+  useEffect(() => {
+    fetchUrls();
+  }, [fetchUrls]);
+
   const getStatusBadge = (status: string, isIndexed: boolean | null) => {
     if (isIndexed === true) {
       return <Badge variant="default" className="bg-green-500">Indexed</Badge>;
@@ -55,14 +88,19 @@ export function UrlsTable({ urls, projectId }: UrlsTableProps) {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold">URLs</h2>
-          <p className="text-muted-foreground">
-            {urls.length} total URLs • {urls.filter(u => u.isIndexed === true).length} indexed
+          <h2 className="text-lg text-gray-300 font-bold">URLs</h2>
+          <p className="text-muted-foreground text-xs">
+            {total} total URLs • {totalIndexed} indexed
           </p>
         </div>
-        <Button variant="outline" size="sm">
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Refresh Status
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={fetchUrls}
+          disabled={loading}
+        >
+          {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+          {loading ? "Loading" : "Refresh Status"}
         </Button>
       </div>
 
@@ -73,27 +111,34 @@ export function UrlsTable({ urls, projectId }: UrlsTableProps) {
               <TableHead>URL</TableHead>
               <TableHead>Domain</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Check Count</TableHead>
               <TableHead>Last Updated</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {urls.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                  No URLs found
-                </TableCell>
-              </TableRow>
+            {projectUrls.length === 0 ? (
+              loading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8 flex items-center justify-center gap-2">
+                    Loading...
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  </TableCell>
+                </TableRow>
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                    No URLs found
+                  </TableCell>
+                </TableRow>
+              )
             ) : (
-              urls.map((url) => (
+              projectUrls.map((url) => (
                 <TableRow key={url.id}>
                   <TableCell className="max-w-md truncate font-medium">
                     {url.url}
                   </TableCell>
                   <TableCell>{url.domain}</TableCell>
                   <TableCell>{getStatusBadge(url.status, url.isIndexed)}</TableCell>
-                  <TableCell>{url.checkCount}</TableCell>
                   <TableCell className="text-muted-foreground text-sm">
                     {formatDistanceToNow(new Date(url.updatedAt), { addSuffix: true })}
                   </TableCell>
@@ -122,6 +167,42 @@ export function UrlsTable({ urls, projectId }: UrlsTableProps) {
           </TableBody>
         </Table>
       </div>
+
+        {/* Pagination Controls */}
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-muted-foreground">
+            {total === 0 ? (
+              ""
+            ) : (
+              `Showing ${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, total)} of ${total}`
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <select
+              value={pageSize}
+              onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
+              className="text-sm border rounded px-2 py-1"
+              disabled={loading}
+            >
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+              <option value={250}>250</option>
+            </select>
+
+            <Button variant="outline" size="sm" onClick={() => { setPage((p) => Math.max(1, p - 1)); }} disabled={loading || page <= 1}>
+              Prev
+            </Button>
+            <div className="text-sm px-2">Page {page} / {Math.max(1, Math.ceil(total / pageSize))}</div>
+            <Button variant="outline" size="sm" onClick={() => { setPage((p) => p + 1); }} disabled={loading || page >= Math.ceil(total / pageSize)}>
+              Next
+            </Button>
+            <Button variant="outline" size="sm" onClick={fetchUrls} disabled={loading}>
+              {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+              {loading ? "Loading" : "Refresh"}
+            </Button>
+          </div>
+        </div>
     </div>
   );
 }

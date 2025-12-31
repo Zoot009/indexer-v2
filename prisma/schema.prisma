@@ -105,7 +105,8 @@ model Project {
 }
 
 enum ProjectStatus {
-  IDLE        // Created, URLs uploaded, not started
+  IDLE        // Created
+  IMPORTED
   QUEUED      // Submitted to Scrape.do, waiting
   PROCESSING  // Actively receiving webhook results
   COMPLETED   // All URLs processed
