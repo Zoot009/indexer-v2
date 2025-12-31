@@ -33,9 +33,6 @@ const ProjectPage = () => {
           <p className="text-muted-foreground text-sm">Manage your project URLs and imports</p>  
         </div>  
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-          ><Download/> Import CSV</Button>
           <Button  
             disabled={projectDetails?.status !== ProjectStatus.IDLE}          
           ><Play/> Start Checking</Button>

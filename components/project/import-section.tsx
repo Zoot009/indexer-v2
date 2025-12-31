@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useCallback, useMemo } from "react";
-import axios from "axios";
 import Papa from "papaparse";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -22,6 +21,7 @@ import {
   Link2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { importUrls as importUrlsAction } from "@/actions/import-url";
 
 interface ImportTabProps {
   projectId: string;
@@ -50,6 +50,7 @@ export function ImportTab({ projectId, onImportComplete }: ImportTabProps) {
   const [importProgress, setImportProgress] = useState<ImportProgress | null>(
     null
   );
+  const [hasImported, setHasImported] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Parse and validate URLs
@@ -135,30 +136,38 @@ export function ImportTab({ projectId, onImportComplete }: ImportTabProps) {
     setImportProgress({
       current: 0,
       total: urlList.length,
-      processing: "Preparing...",
+      processing: "Submitting...",
     });
 
     try {
-      // Simulate progress
-      const progressInterval = setInterval(() => {
-        setImportProgress((prev) => {
-          if (!prev || prev.current >= prev.total) return prev;
-          return {
-            ...prev,
-            current: Math.min(prev.current + 1, prev.total),
-            processing: `Processing URL ${prev.current + 1} of ${prev.total}...`,
-          };
-        });
-      }, 100);
+      // Submit in chunks to avoid body size limits and improve reliability
+      const chunkSize = 500;
+      const chunks: string[][] = [];
+      for (let i = 0; i < urlList.length; i += chunkSize) {
+        chunks.push(urlList.slice(i, i + chunkSize));
+      }
 
-      const response = await axios.post(
-        `/api/projects/${projectId}/backlinks`,
-        {
-          urls: urlList,
+      let imported = 0;
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
+        setImportProgress((prev) => ({
+          current: Math.min(imported, urlList.length),
+          total: urlList.length,
+          processing: `Submitting batch ${i + 1} of ${chunks.length}...`,
+        }));
+
+        const res = await importUrlsAction(projectId, chunk);
+        if (!res.success) {
+          throw new Error(res.error || "Failed to import URLs");
         }
-      );
+        imported += res.data?.imported ?? chunk.length;
+        setImportProgress((prev) => ({
+          current: Math.min(imported, urlList.length),
+          total: urlList.length,
+          processing: `Imported ${imported}/${urlList.length}`,
+        }));
+      }
 
-      clearInterval(progressInterval);
       setImportProgress({
         current: urlList.length,
         total: urlList.length,
@@ -166,14 +175,15 @@ export function ImportTab({ projectId, onImportComplete }: ImportTabProps) {
       });
 
       setTimeout(() => {
-        toast.success(`Successfully imported ${urlList.length} backlinks`);
+        toast.success(`Successfully imported ${imported} backlinks`);
         setUrls("");
         setImportProgress(null);
+        setHasImported(true);
         onImportComplete?.();
       }, 500);
     } catch (error: any) {
       console.error("Error importing URLs:", error);
-      toast.error(error.response?.data?.error || "Failed to import URLs");
+      toast.error(error?.message || "Failed to import URLs");
       setImportProgress(null);
     } finally {
       setTimeout(() => setIsImporting(false), 500);
@@ -406,14 +416,34 @@ export function ImportTab({ projectId, onImportComplete }: ImportTabProps) {
               </div>
             )}
 
-            {/* URL Preview */}
-            {parsedUrls.length > 0 && (
+            {/* URL Preview (hidden after successful import) */}
+            {parsedUrls.length > 0 && !hasImported && (
               <div className="border rounded-lg p-4 bg-white dark:bg-gray-900">
                 <div className="flex items-center justify-between mb-3">
                   <h4 className="text-sm font-medium">URL Preview</h4>
                   <span className="text-xs text-muted-foreground">
                     {parsedUrls.length} URL{parsedUrls.length > 1 ? "s" : ""} detected
                   </span>
+                </div>
+                {/* Submit button appears when URLs are parsed */}
+                <div className="flex justify-end mb-3">
+                  <Button
+                    onClick={handlePasteImport}
+                    disabled={isImporting || validUrls.length === 0}
+                    size="sm"
+                  >
+                    {isImporting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Submitting...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="mr-2 h-4 w-4" />
+                        Submit {validUrls.length > 0 ? `${validUrls.length} URL${validUrls.length > 1 ? "s" : ""}` : "URLs"}
+                      </>
+                    )}
+                  </Button>
                 </div>
                 <ScrollArea className="h-50">
                   <div className="space-y-2">
@@ -512,17 +542,6 @@ export function ImportTab({ projectId, onImportComplete }: ImportTabProps) {
                   Supports .csv and .txt files with URLs
                 </p>
               </div>
-
-              <div className="pt-4">
-                <div className="inline-block text-left bg-gray-50 dark:bg-gray-900 rounded-lg p-3 text-xs text-muted-foreground">
-                  <div className="font-semibold mb-1">Accepted formats:</div>
-                  <div className="font-mono space-y-0.5">
-                    <div>https://example.com/page1</div>
-                    <div>https://myblog.com/article</div>
-                    <div>website.com/post</div>
-                  </div>
-                </div>
-              </div>
             </div>
 
             <Input
@@ -601,12 +620,12 @@ export function ImportTab({ projectId, onImportComplete }: ImportTabProps) {
 
       <Separator />
 
-      {/* Import Button */}
+      {/* Submit Button (summary) */}
       <div className="flex justify-between items-center">
         <div className="text-sm text-muted-foreground">
           {validUrls.length > 0 ? (
             <>
-              Ready to import <strong>{validUrls.length}</strong> backlink{validUrls.length > 1 ? "s" : ""}
+              Ready to submit <strong>{validUrls.length}</strong> backlink{validUrls.length > 1 ? "s" : ""}
             </>
           ) : (
             "Paste or upload URLs to get started"
@@ -621,12 +640,12 @@ export function ImportTab({ projectId, onImportComplete }: ImportTabProps) {
           {isImporting ? (
             <>
               <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              Importing...
+              Submitting...
             </>
           ) : (
             <>
               <CheckCircle2 className="mr-2 h-5 w-5" />
-              Import {validUrls.length > 0 ? `${validUrls.length} URL${validUrls.length > 1 ? "s" : ""}` : "URLs"}
+              Submit {validUrls.length > 0 ? `${validUrls.length} URL${validUrls.length > 1 ? "s" : ""}` : "URLs"}
             </>
           )}
         </Button>

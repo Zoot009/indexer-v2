@@ -8,62 +8,151 @@ datasource db {
   provider = "postgresql"
 }
 
+model Config {
+  id                   String   @id @default(cuid())
+
+  enabled              Boolean  @default(true)
+
+  maxChecks            Int      @default(20)
+  indexedStopThreshold Int      @default(2)
+
+  applyBlacklistRule   Boolean  @default(true)
+  applyWhitelistRule   Boolean  @default(true)
+
+  apiKey               String   @unique
+
+  updatedAt            DateTime @updatedAt
+
+  @@map("config")
+}
+
+// ============================================
+// NEW: Credit configuration and tracking
+// ============================================
+
+model CreditConfig {
+  id                  String   @id @default(cuid())
+  totalCredits        Int      @default(1250000)  // Your Scrape.do plan limit
+  usedCredits         Int      @default(0)
+  reservedCredits     Int      @default(0)        // Locked for active projects
+  creditsPerCheck     Int      @default(10)       // Cost per URL check
+  
+  updatedAt           DateTime @updatedAt
+  
+  // Singleton pattern - only one row
+  @@map("credit_config")
+}
+
+model CreditLog {
+  id            String          @id @default(cuid())
+  amount        Int                               // Positive = deduction, Negative = refund
+  operation     CreditOperation
+  balanceAfter  Int                               // Credits remaining after operation
+  description   String? 
+  
+  projectId     String? 
+  project       Project?        @relation(fields:  [projectId], references: [id], onDelete: SetNull)
+  
+  createdAt     DateTime        @default(now())
+  
+  @@index([projectId])
+  @@index([createdAt])
+  @@map("credit_logs")
+}
+
+enum CreditOperation {
+  RESERVATION       // Credits locked when project starts
+  RELEASE           // Reserved credits returned (project cancelled/failed)
+  CONSUMPTION       // Actual usage when URL is checked
+  REFUND            // Credits returned for failed checks
+  ADJUSTMENT        // Manual adjustment
+}
+
+// ============================================
+// UPDATED: Project with progress counters
+// ============================================
+
 model Project {
-  id          String    @id @default(cuid())
+  id          String        @id @default(cuid())
   name        String
-  isArchived  Boolean   @default(false)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
   status      ProjectStatus @default(IDLE)
 
+  // NEW: Progress tracking
+  totalUrls         Int       @default(0)
+  processedCount    Int       @default(0)
+  indexedCount      Int       @default(0)
+  notIndexedCount   Int       @default(0)
+  errorCount        Int       @default(0)
+  
+  // NEW: Credit tracking per project
+  creditsReserved   Int       @default(0)
+  creditsUsed       Int       @default(0)
+  
+  // NEW:  Timing
+  startedAt         DateTime?
+  completedAt       DateTime? 
+
   domains     Domain[]
-  urls Url[]
+  urls        Url[]
+  creditLogs  CreditLog[]
 
   @@index([createdAt])
-  @@index([isArchived])
+  @@index([status])
+
+  @@map("projects")
 }
 
 enum ProjectStatus {
-  IDLE
-  QUEUED
-  PROCESSING
-  COMPLETED
-  FAILED
+  IDLE        // Created, URLs uploaded, not started
+  QUEUED      // Submitted to Scrape.do, waiting
+  PROCESSING  // Actively receiving webhook results
+  COMPLETED   // All URLs processed
+  FAILED      // Critical error occurred
+  PAUSED      // User paused (future feature)
 }
 
 model Url {
   id             String    @id @default(cuid())
   url            String    @unique
   domain         String
-  isIndexed      Boolean? 
-  anchorText     String?
+  isIndexed      Boolean   @default(false) 
+  anchorText     String? 
   checkCount     Int       @default(0)
   status         UrlStatus @default(PENDING)
 
-  htmlContent   String?
+  htmlContent    String?
 
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+  checkedAt      DateTime?    // NEW: When the check completed
 
-  jobId         String?
-  taskId        String?
+  jobId          String?
+  taskId         String? 
+
+  errorMessage   String?     // NEW: Store error details
 
   projectId      String
   project        Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  domainId       String? 
-  domainData     Domain?  @relation(fields: [domainId], references: [id])
+  domainId       String?  
+  domainData     Domain?   @relation(fields:  [domainId], references: [id])
 
   @@index([domain])
   @@index([status])
   @@index([isIndexed])
+  @@index([taskId])           // NEW: For webhook lookups
+  @@index([projectId, status]) // NEW: Composite index for project queries
+  @@map("urls")
 }
 
 enum UrlStatus {
-  PENDING
-  PROCESSING
-  COMPLETED
-  FAILED
+  PENDING     // Not yet submitted
+  QUEUED      // Submitted to Scrape. do
+  PROCESSING  // Being processed (optional intermediate state)
+  COMPLETED   // Check finished (indexed or not)
+  FAILED      // Check failed after retries
 }
 
 model Domain {
@@ -77,7 +166,7 @@ model Domain {
   blacklistedAt     DateTime?
 
   projectId      String
-  project        Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project        Project @relation(fields: [projectId], references:  [id], onDelete: Cascade)
 
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
@@ -86,4 +175,5 @@ model Domain {
 
   @@index([isBlacklisted])
   @@index([domain])
+  @@map("domains")
 }
