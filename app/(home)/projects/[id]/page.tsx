@@ -6,7 +6,7 @@ import { UrlsTable } from '@/components/project/urls-table';
 import { Button } from '@/components/ui/button'
 import { ProjectStatus } from '@/lib/generated/prisma';
 import axios from 'axios';
-import { Download, Import, ImportIcon, Play } from 'lucide-react';
+import { Download, Import, ImportIcon, Loader, Play } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
@@ -55,10 +55,16 @@ const ProjectPage = () => {
           <p className="text-muted-foreground text-sm">Manage your project URLs and imports</p>  
         </div>  
         <div className="flex gap-2">
-          <Button  
-            onClick={()=>handleStartChecking()}
-            disabled={projectDetails?.status !== ProjectStatus.IMPORTED || loading}          
-          >{loading ? <Play className="animate-spin" /> : <Play />} Start Checking</Button>
+          {
+            projectDetails?.status === ProjectStatus.COMPLETED ? (
+              <></>
+            ) : (
+              <Button  
+                onClick={()=>handleStartChecking()}
+                disabled={projectDetails?.status !== ProjectStatus.IMPORTED || loading}          
+              >{loading ? <Loader className="animate-spin" /> : <Play />} Start Checking</Button>
+            )
+          }
         </div>
       </div>
       <div className="">

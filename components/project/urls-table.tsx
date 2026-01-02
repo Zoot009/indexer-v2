@@ -122,7 +122,7 @@ export function UrlsTable({ projectId }: UrlsTableProps) {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-lg text-gray-300 font-bold">URLs</h2>
+          <h2 className="text-lg dark:text-gray-300 text-gray-700 font-bold">URLs</h2>
           <p className="text-muted-foreground text-xs">
             {total} total URLs • {totalIndexed} indexed
           </p>
