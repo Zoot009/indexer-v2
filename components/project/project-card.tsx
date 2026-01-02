@@ -59,7 +59,7 @@ const ProjectCard = ({
       </CardHeader>
       <CardContent>
         <div className="flex justify-between items-center">
-          <Badge variant={"secondary"} className="text-xs">
+          <Badge variant={"outline"} className="text-xs">
             {urlCount ? `${urlCount} Backlinks` : 'No Backlinks'}
           </Badge>
           <Badge className={cn(

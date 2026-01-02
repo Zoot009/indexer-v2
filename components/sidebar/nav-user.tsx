@@ -8,6 +8,10 @@ import {
   LogOut,
   Sparkles,
 } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { useState } from "react"
+import axios from "axios"
+import { toast } from "sonner"
 
 import {
   Avatar,
@@ -40,6 +44,26 @@ export function NavUser({
   }
 }) {
   const { isMobile } = useSidebar()
+  const router = useRouter()
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true)
+    try {
+      await axios.post('/api/auth/logout')
+      toast.success('Logged out successfully')
+      router.push('/auth/login')
+      // Force a page refresh to clear any cached state
+      setTimeout(() => {
+        window.location.href = '/auth/login'
+      }, 500)
+    } catch (error) {
+      console.error('Error logging out:', error)
+      toast.error('Failed to logout. Please try again.')
+    } finally {
+      setIsLoggingOut(false)
+    }
+  }
 
   return (
     <SidebarMenu>
@@ -80,31 +104,15 @@ export function NavUser({
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <Sparkles />
-                Upgrade to Pro
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <BadgeCheck />
-                Account
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <CreditCard />
-                Billing
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Bell />
-                Notifications
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <LogOut />
-              Log out
+            <DropdownMenuItem
+              className="cursor-pointer text-red-500 dark:text-red-400"
+              onSelect={handleLogout}
+              disabled={isLoggingOut}
+            >
+              <LogOut 
+                className="mr-2 size-4 dark:text-red-400"
+              />
+              {isLoggingOut ? 'Logging out...' : 'Log out'}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

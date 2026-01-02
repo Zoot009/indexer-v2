@@ -1,7 +1,8 @@
 "use client"
 
+import { usePathname } from "next/navigation"
 import * as React from "react"
-import logo from "@/public/favicon-32x32.png"
+import logo from "@/public/android-chrome-192x192.png"
 import {
   BookOpen,
   Bot,
@@ -28,6 +29,9 @@ import { NavUser } from "./nav-user"
 import { NavMain } from "./nav-main"
 import { NavProjects } from "./nav-project"
 import Image from "next/image"
+import { useAuth, useUser } from "@clerk/nextjs"
+
+
 
 const data = {
   user: {
@@ -154,6 +158,24 @@ const data = {
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const pathname = usePathname()
+  const user = useUser()
+  const [ userData, setUserData ] = React.useState(data.user)
+
+  React.useEffect(() => {
+    if (user.user) {
+      setUserData({
+        name: user.user.firstName|| "User",
+        email: user.user.primaryEmailAddress?.emailAddress || "",
+        avatar: user.user.imageUrl || "",
+      })
+    } 
+  }, [user.user])
+
+  // Determine which content to show
+  const isProjectList = pathname === '/projects'
+  const isProjectDetail = pathname?.startsWith('/projects/') && pathname !== '/projects'
+
   return (
     <Sidebar variant="inset" {...props}>
       <SidebarHeader>
@@ -177,12 +199,23 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
+      
       <SidebarContent>
-        <NavMain items={data.navMain} />
-        <NavProjects projects={data.projects} />
+        {isProjectList && (
+          <NavMain items={data.navMain} />
+        )}
+        
+        {isProjectDetail && (
+          <NavProjects projects={data.projects} />
+        )}
+        
+        {!isProjectList && !isProjectDetail && (
+          <NavMain items={data.navMain} />
+        )}
       </SidebarContent>
+      
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={userData} />
       </SidebarFooter>
     </Sidebar>
   )

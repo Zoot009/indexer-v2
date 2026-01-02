@@ -1,47 +1,104 @@
 "use client"
 
+import React from "react"
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
-import { Moon, Sun, LogOut, Loader2 } from "lucide-react"
+import { Moon, Sun } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { useUser } from "@/hooks/use-user"
-import axios from "axios"
-import { toast } from "sonner"
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
+import { usePathname } from "next/navigation"
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
+import { getProjectDetails } from "@/actions/get-project-details"
 
 export function SiteHeader() {
   const { resolvedTheme, setTheme } = useTheme()
-  const { user } = useUser()
-  const router = useRouter()
   const [mounted, setMounted] = useState(false)
-  const [isLoggingOut, setIsLoggingOut] = useState(false)
-  const [showLogoutDialog, setShowLogoutDialog] = useState(false)
+  const pathname = usePathname()
+const [projectName, setProjectName] = useState<string | null>(null)
+  
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
-  const handleLogout = async () => {
-    setIsLoggingOut(true)
-    setShowLogoutDialog(false)
-    try {
-      await axios.post('/api/auth/logout')
-      toast.success('Logged out successfully')
-      router.push('/auth/login')
-      // Force a page refresh to clear any cached state
-      setTimeout(() => {
-        window.location.href = '/auth/login'
-      }, 500)
-    } catch (error) {
-      console.error('Error logging out:', error)
-      toast.error('Failed to logout. Please try again.')
-    } finally {
-      setIsLoggingOut(false)
+  // Fetch project name when on a project detail page
+  useEffect(() => {
+    const fetchProjectName = async () => {
+      if (!pathname) return
+      
+      const segments = pathname.split('/').filter(Boolean)
+      // Check if we're on /projects/[id] route
+      if (segments[0] === 'projects' && segments[1]) {
+        const projectId = segments[1]
+        // Check if it looks like a UUID or ID
+        if (projectId.match(/^[a-f0-9-]{36}$/i) || projectId.match(/^[a-zA-Z0-9]{8,}$/)) {
+          try {
+            const project = await getProjectDetails(projectId)
+            if (project) {
+              setProjectName(project.name)
+            } else {
+              setProjectName(null)
+            }
+          } catch (error) {
+            console.error('Failed to fetch project details:', error)
+            setProjectName(null)
+          }
+        }
+      } else {
+        setProjectName(null)
+      }
     }
+
+    fetchProjectName()
+  }, [pathname])
+
+  // Generate breadcrumbs from pathname
+  const generateBreadcrumbs = () => {
+    if (!pathname) return []
+    
+    const segments = pathname.split('/').filter(Boolean)
+    const breadcrumbs = [{ label: 'Home', href: '/' }]
+    
+    let currentPath = ''
+    segments.forEach((segment, index) => {
+      currentPath += `/${segment}`
+      
+      // Capitalize and format segment
+      let label = segment
+        .split('-')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ')
+      
+      // Special handling for UUIDs or IDs
+      if (segment.match(/^[a-f0-9-]{36}$/i) || segment.match(/^[a-zA-Z0-9]{8,}$/)) {
+        // If it's the project ID and we have the project name, use it
+        if (index === 1 && segments[0] === 'projects' && projectName) {
+          label = projectName
+        } else if (index === 1) {
+          label = 'Project Details'
+        } else {
+          label = segment
+        }
+      }
+      
+      breadcrumbs.push({
+        label,
+        href: currentPath,
+      })
+    })
+    
+    return breadcrumbs
   }
+
+  const breadcrumbs = generateBreadcrumbs()
 
   if (!mounted) {
     return (
@@ -53,7 +110,13 @@ export function SiteHeader() {
               orientation="vertical"
               className="mx-2 data-[orientation=vertical]:h-4"
             />
-            <h1 className="text-base font-medium">Projects</h1>
+            <Breadcrumb>
+              <BreadcrumbList>
+                <BreadcrumbItem>
+                  <BreadcrumbPage>Loading...</BreadcrumbPage>
+                </BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
           </div>
           <div className="flex items-center gap-2">
             {/* Theme and logout buttons rendered below */}
@@ -72,7 +135,24 @@ export function SiteHeader() {
             orientation="vertical"
             className="mx-2 data-[orientation=vertical]:h-4"
           />
-          <h1 className="text-base font-medium">Projects</h1>
+          <Breadcrumb>
+            <BreadcrumbList>
+              {breadcrumbs.map((crumb, index) => (
+                <React.Fragment key={crumb.href}>
+                  <BreadcrumbItem>
+                    {index < breadcrumbs.length - 1 ? (
+                      <BreadcrumbLink href={crumb.href}>
+                        {crumb.label}
+                      </BreadcrumbLink>
+                    ) : (
+                      <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
+                    )}
+                  </BreadcrumbItem>
+                  {index < breadcrumbs.length - 1 && <BreadcrumbSeparator />}
+                </React.Fragment>
+              ))}
+            </BreadcrumbList>
+          </Breadcrumb>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -90,44 +170,6 @@ export function SiteHeader() {
               {resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
             </span>
           </Button>
-          {user && (
-            <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={isLoggingOut}
-                  className="h-9 w-9 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
-                >
-                  {isLoggingOut ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <LogOut className="h-4 w-4" />
-                  )}
-                  <span className="sr-only">
-                    {isLoggingOut ? 'Logging out...' : 'Log out'}
-                  </span>
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Are you sure you want to log out?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    You will be redirected to the login page.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={handleLogout}
-                    className="bg-red-600 hover:bg-red-700"
-                  >
-                    Yes, Log Out
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          )}
         </div>
       </div>
     </header>

@@ -12,8 +12,8 @@ export interface ProjectDetails {
 }
 
 export const getProjectDetails = async (projectId: string): Promise<ProjectDetails | null> => {
-  const projectName = await prisma.project.findUnique({
+  const projectDetails = await prisma.project.findUnique({
     where: { id: projectId }
   });
-  return projectName;
+  return projectDetails;
 }
