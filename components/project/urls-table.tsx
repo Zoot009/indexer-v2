@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, RefreshCw, Trash2, Loader2 } from "lucide-react";
+import { ExternalLink, RefreshCw, Trash2, Loader2, Copy, ArrowUpDown, ArrowUp, ArrowDown, Search } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useCallback, useEffect, useState } from "react";
 import { getProjectUrls, ProjectUrls } from "@/actions/get-project-urls";
@@ -39,11 +39,16 @@ export function UrlsTable({ projectId }: UrlsTableProps) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [loading, setLoading] = useState(false);
+  const [sortBy, setSortBy] = useState<"url" | "domain" | "updatedAt">("updatedAt");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [isIndexedFilter, setIsIndexedFilter] = useState<"all" | "indexed" | "not-indexed">("all");
 
   const fetchUrls = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await getProjectUrls(projectId, page, pageSize);
+      const response = await getProjectUrls(projectId, page, pageSize, sortBy, sortOrder, search, isIndexedFilter);
       if (!response.success || !response.data) {
         console.error("Failed to fetch project URLs:", response.error);
         return;
@@ -58,11 +63,40 @@ export function UrlsTable({ projectId }: UrlsTableProps) {
     finally {
       setLoading(false);
     }
-  }, [projectId, page, pageSize]);
+  }, [projectId, page, pageSize, sortBy, sortOrder, search, isIndexedFilter]);
 
   useEffect(() => {
     fetchUrls();
   }, [fetchUrls]);
+
+  const handleCopyUrl = (url: string) => {
+    navigator.clipboard.writeText(url);
+    toast.success("URL copied to clipboard");
+  };
+
+  const handleSort = (column: "url" | "domain" | "updatedAt") => {
+    if (sortBy === column) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(column);
+      setSortOrder("asc");
+    }
+    setPage(1);
+  };
+
+  const handleSearch = () => {
+    setSearch(searchInput);
+    setPage(1);
+  };
+
+  const getSortIcon = (column: "url" | "domain" | "updatedAt") => {
+    if (sortBy !== column) {
+      return <ArrowUpDown className="h-3 w-3 ml-1 inline" />;
+    }
+    return sortOrder === "asc" ? 
+      <ArrowUp className="h-3 w-3 ml-1 inline" /> : 
+      <ArrowDown className="h-3 w-3 ml-1 inline" />;
+  };
 
   const getStatusBadge = (status: string, isIndexed: boolean | null) => {
     if (isIndexed === true) {
@@ -104,14 +138,74 @@ export function UrlsTable({ projectId }: UrlsTableProps) {
         </Button>
       </div>
 
+      {/* Search and Filter Controls */}
+      <div className="flex gap-2 items-center">
+        <div className="flex-1 flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search URLs or domains..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+              className="w-full pl-8 pr-3 py-2 border rounded-md text-sm focus"
+              disabled={loading}
+            />
+          </div>
+          <Button 
+            variant="outline" 
+            className="py-3"
+            onClick={handleSearch}
+            disabled={loading}
+          >
+            Search
+          </Button>
+        </div>
+        <select
+          value={isIndexedFilter}
+          onChange={(e) => { setIsIndexedFilter(e.target.value as any); setPage(1); }}
+          className="text-sm border rounded px-3 py-2"
+          disabled={loading}
+        >
+          <option value="all">All Status</option>
+          <option value="indexed">Indexed Only</option>
+          <option value="not-indexed">Not Indexed Only</option>
+        </select>
+      </div>
+
       <div className="border rounded-lg">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>URL</TableHead>
-              <TableHead>Domain</TableHead>
+              <TableHead>
+                <button 
+                  onClick={() => handleSort("url")} 
+                  className="flex items-center hover:text-foreground"
+                  disabled={loading}
+                >
+                  URL {getSortIcon("url")}
+                </button>
+              </TableHead>
+              <TableHead>
+                <button 
+                  onClick={() => handleSort("domain")} 
+                  className="flex items-center hover:text-foreground"
+                  disabled={loading}
+                >
+                  Domain {getSortIcon("domain")}
+                </button>
+              </TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Last Updated</TableHead>
+              <TableHead>
+                <button 
+                  onClick={() => handleSort("updatedAt")} 
+                  className="flex items-center hover:text-foreground"
+                  disabled={loading}
+                >
+                  Last Updated {getSortIcon("updatedAt")}
+                </button>
+              </TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -148,7 +242,17 @@ export function UrlsTable({ projectId }: UrlsTableProps) {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8"
+                        onClick={() => handleCopyUrl(url.url)}
+                        title="Copy URL"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
                         onClick={() => window.open(url.url, "_blank")}
+                        title="Open URL"
                       >
                         <ExternalLink className="h-4 w-4" />
                       </Button>
@@ -156,6 +260,7 @@ export function UrlsTable({ projectId }: UrlsTableProps) {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-destructive"
+                        title="Delete URL"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

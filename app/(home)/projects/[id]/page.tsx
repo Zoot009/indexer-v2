@@ -5,12 +5,33 @@ import { ImportTab } from '@/components/project/import-section';
 import { UrlsTable } from '@/components/project/urls-table';
 import { Button } from '@/components/ui/button'
 import { ProjectStatus } from '@/lib/generated/prisma';
+import axios from 'axios';
 import { Download, Import, ImportIcon, Play } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 const ProjectPage = () => {
   const [projectDetails, setProjectDetails] =  useState<ProjectDetails | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleStartChecking = async() => {
+    if (!projectDetails) return;
+    try {
+      setLoading(true);
+      const response = await axios.post('/api/enqueue', {
+        projectId: projectDetails.id,
+      });
+      if (response.status === 200) {
+        // Refresh project details to update status
+        const updatedDetails = await getProjectDetails(projectDetails.id);
+        setProjectDetails(updatedDetails || null);
+      }
+    } catch (error) {
+      console.error("Error starting index check:", error);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   const params = useParams<{id: string}>();
   
@@ -35,8 +56,9 @@ const ProjectPage = () => {
         </div>  
         <div className="flex gap-2">
           <Button  
-            disabled={projectDetails?.status !== ProjectStatus.IDLE}          
-          ><Play/> Start Checking</Button>
+            onClick={()=>handleStartChecking()}
+            disabled={projectDetails?.status !== ProjectStatus.IMPORTED || loading}          
+          >{loading ? <Play className="animate-spin" /> : <Play />} Start Checking</Button>
         </div>
       </div>
       <div className="">

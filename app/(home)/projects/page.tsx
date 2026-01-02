@@ -26,7 +26,7 @@ export default async function TestRedisPage() {
             lastUpdated={project.updatedAt.toISOString()}
             status={project.status}
             urlCount={project.urls.length}
-            indexedCount={project.urls.filter(url => url.isIndexed).length}
+            indexedCount={project.urls.filter(url => url.status === 'COMPLETED').length}
           />
         ))}
       </div>

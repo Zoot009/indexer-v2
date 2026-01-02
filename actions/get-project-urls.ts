@@ -22,6 +22,10 @@ export async function getProjectUrls(
   projectId: string,
   page = 1,
   pageSize = 50,
+  sortBy: "url" | "domain" | "updatedAt" = "updatedAt",
+  sortOrder: "asc" | "desc" = "desc",
+  search = "",
+  isIndexedFilter: "all" | "indexed" | "not-indexed" = "all",
 ): Promise<ActionResponse<{ items: ProjectUrls[]; total: number; totalIndexed: number }>> {
   try {
     if (!projectId) {
@@ -29,14 +33,34 @@ export async function getProjectUrls(
     }
     const where = { projectId } as any;
 
+    // Add search filter
+    if (search) {
+      where.OR = [
+        { url: { contains: search, mode: "insensitive" } },
+        { domain: { contains: search, mode: "insensitive" } },
+      ];
+    }
+
+    // Add indexed filter
+    if (isIndexedFilter === "indexed") {
+      where.isIndexed = true;
+    } else if (isIndexedFilter === "not-indexed") {
+      where.isIndexed = false;
+    }
+
     const total = await prisma.url.count({ where });
-    const totalIndexed = await prisma.url.count({ where: { ...where, isIndexed: true } });
+    const totalIndexed = await prisma.url.count({ where: { projectId, isIndexed: true } });
 
     const urls = await prisma.url.findMany({
       where,
-      orderBy: { updatedAt: "desc" },
+      orderBy: { [sortBy]: sortOrder },
       skip: (page - 1) * pageSize,
       take: pageSize,
+    });
+
+    const domains = await prisma.domain.findMany({
+      where: { projectId },
+      select: { domain: true },
     });
 
     const formatedUrls = urls.map((url) => ({
@@ -44,9 +68,9 @@ export async function getProjectUrls(
       url: url.url,
       status: url.status,
       isIndexed: url.isIndexed,
-      domain: url.domain,
       createdAt: url.createdAt,
       updatedAt: url.updatedAt,
+      domain: domains.find((d) => url.url.includes(d.domain))?.domain || "",
     }));
 
     return {

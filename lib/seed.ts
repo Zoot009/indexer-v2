@@ -1,25 +1,53 @@
-import 'dotenv/config'
-import prisma from './prisma'
+import { PrismaClient } from './generated/prisma';
+
+const prisma = new PrismaClient();
 
 async function main() {
-  // Create or update the singleton credit config
-  await prisma.creditConfig.upsert({
-    where: { id:  'main' },
-    update: {},
-    create: {
-      id: 'main',
-      totalCredits: 1250000,  // Your Scrape.do plan
-      usedCredits: 316116,
+  console.log('🌱 Starting database seed...');
+
+  // Clear existing data
+  console.log('🧹 Cleaning existing data...');
+  await prisma.creditConfig.deleteMany();
+  await prisma.config.deleteMany();
+
+  // Create Config
+  console.log('⚙️  Creating system config...');
+  const config = await prisma.config.create({
+    data: {
+      enabled: true,
+      maxChecks: 20,
+      indexedStopThreshold: 2,
+      applyBlacklistRule: true,
+      applyWhitelistRule: true,
+      apiKey: 'test-api-key-12345',
+    },
+  });
+  console.log(`✅ Config created: ${config.id}`);
+
+  // Create Credit Config
+  console.log('💰 Creating credit config...');
+  const creditConfig = await prisma.creditConfig.create({
+    data: {
+      totalCredits: 1250000,
+      usedCredits: 372703,
       reservedCredits: 0,
       creditsPerCheck: 10,
     },
-  })
+  });
+  console.log(`✅ Credit config created: ${creditConfig.id}`);
 
-  console.log('Credit config initialized')
+  // Summary
+  console.log('\n📈 Seed Summary:');
+  console.log(`   - Config entries: 1`);
+  console.log(`   - Credit config entries: 1`);
+  console.log('\n✨ Database seeded successfully!');
 }
 
 main()
   .catch((e) => {
-    console.error("ERROR: ",e)
-    process.exit(1)
+    console.error('❌ Error seeding database:', e);
+    process.exit(1);
   })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });
