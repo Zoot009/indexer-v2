@@ -43,6 +43,7 @@ interface ParsedUrl {
 
 export function ImportTab({ projectId, onImportComplete }: ImportTabProps) {
   const [urls, setUrls] = useState("");
+  const [anchorText, setAnchorText] = useState("");
   const [isImporting, setIsImporting] = useState(false);
   const [importMethod, setImportMethod] = useState<"paste" | "upload">("paste");
   const [dragActive, setDragActive] = useState(false);
@@ -131,7 +132,13 @@ export function ImportTab({ projectId, onImportComplete }: ImportTabProps) {
 
     setIsImporting(true);
 
-    const urlList = validUrls.map((u) => u.normalized);
+    // Parse anchor texts if available
+    const anchorTextLines = anchorText.split("\n").map((line) => line.trim());
+    
+    const urlList = validUrls.map((u, index) => ({
+      url: u.normalized,
+      anchorText: anchorTextLines[index] || undefined,
+    }));
 
     setImportProgress({
       current: 0,
@@ -142,7 +149,7 @@ export function ImportTab({ projectId, onImportComplete }: ImportTabProps) {
     try {
       // Submit in chunks to avoid body size limits and improve reliability
       const chunkSize = 500;
-      const chunks: string[][] = [];
+      const chunks: typeof urlList[] = [];
       for (let i = 0; i < urlList.length; i += chunkSize) {
         chunks.push(urlList.slice(i, i + chunkSize));
       }
@@ -211,7 +218,7 @@ export function ImportTab({ projectId, onImportComplete }: ImportTabProps) {
     try {
       const text = await file.text();
       let extractedUrls: string[] = [];
-
+      let anchorTexts: string[] = [];
       if (fileExtension === ".csv") {
         // Use PapaParse for CSV parsing with headers
         Papa.parse(text, {
@@ -225,6 +232,12 @@ export function ImportTab({ projectId, onImportComplete }: ImportTabProps) {
               const nofollow = row['Nofollow'] || row['nofollow'] || row['NOFOLLOW'];
               if (nofollow === true || nofollow === 'true' || nofollow === 'TRUE' || nofollow === '1') {
                 return; // Skip this row
+              }
+
+              // Extract Anchor Text if available
+              const anchor = row['Anchor'] || row['anchor'] || row['ANCHOR'];
+              if (anchor) {
+                anchorTexts.push(String(anchor).trim());
               }
 
               // Extract URL from 'Source url' column
@@ -268,6 +281,7 @@ export function ImportTab({ projectId, onImportComplete }: ImportTabProps) {
         return;
       }
 
+      setAnchorText(anchorTexts.join("\n"));
       setUrls(extractedUrls.join("\n"));
       setUploadedFileName(file.name);
       setImportProgress(null);
@@ -313,6 +327,7 @@ export function ImportTab({ projectId, onImportComplete }: ImportTabProps) {
 
   const handleClearAll = () => {
     setUrls("");
+    setAnchorText("");
     setImportProgress(null);
     setUploadedFileName(null);
   };

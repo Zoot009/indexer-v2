@@ -9,6 +9,9 @@ export interface ProjectDetails {
   createdAt: Date;
   updatedAt: Date;
   status: ProjectStatus;
+  creditsUsed: number;
+  startedAt: Date | null;
+  completedAt: Date | null;
 }
 
 export const getProjectDetails = async (projectId: string): Promise<ProjectDetails | null> => {

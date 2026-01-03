@@ -62,7 +62,7 @@ model Project {
   startedAt       DateTime?
   completedAt     DateTime?
   creditLogs      CreditLog[]
-  domains         Domain[]
+  projectDomains  ProjectDomain[]
   urls            Url[]
 
   @@index([createdAt])
@@ -93,23 +93,35 @@ model Url {
 }
 
 model Domain {
+  id        String   @id @default(cuid())
+  domain    String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  urls      Url[]
+  projects  ProjectDomain[]
+
+  @@index([domain])
+  @@map("domains")
+}
+
+model ProjectDomain {
   id               String    @id @default(cuid())
-  domain           String    @unique
+  projectId        String
+  domainId         String
   notIndexedCount  Int       @default(0)
   totalUrlsChecked Int       @default(0)
   indexedUrlsCount Int       @default(0)
   isBlacklisted    Boolean   @default(false)
   isWhitelisted    Boolean   @default(false)
   blacklistedAt    DateTime?
-  projectId        String
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   project          Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  urls             Url[]
+  domain           Domain    @relation(fields: [domainId], references: [id], onDelete: Cascade)
 
+  @@unique([projectId, domainId])
   @@index([isBlacklisted])
-  @@index([domain])
-  @@map("domains")
+  @@map("project_domains")
 }
 
 enum CreditOperation {

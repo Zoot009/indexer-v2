@@ -4,16 +4,13 @@ import { usePathname } from "next/navigation"
 import * as React from "react"
 import logo from "@/public/android-chrome-192x192.png"
 import {
-  BookOpen,
-  Bot,
-  Command,
-  Frame,
-  LifeBuoy,
-  Map,
+  Folder,
+  Gauge,
+  Globe,
+  Link,
+  OctagonX,
   PieChart,
-  Send,
   Settings2,
-  SquareTerminal,
 } from "lucide-react"
 
 import {
@@ -29,7 +26,8 @@ import { NavUser } from "./nav-user"
 import { NavMain } from "./nav-main"
 import { NavProjects } from "./nav-project"
 import Image from "next/image"
-import { useAuth, useUser } from "@clerk/nextjs"
+import { useUser } from "@clerk/nextjs"
+import { NavSecondary } from "./nav-secondary"
 
 
 
@@ -41,118 +39,46 @@ const data = {
   },
   navMain: [
     {
-      title: "Playground",
-      url: "#",
-      icon: SquareTerminal,
+      title: "All Projects",
+      url: "/projects",
+      icon: Folder,
       isActive: true,
-      items: [
-        {
-          title: "History",
-          url: "#",
-        },
-        {
-          title: "Starred",
-          url: "#",
-        },
-        {
-          title: "Settings",
-          url: "#",
-        },
-      ],
     },
     {
-      title: "Models",
-      url: "#",
-      icon: Bot,
-      items: [
-        {
-          title: "Genesis",
-          url: "#",
-        },
-        {
-          title: "Explorer",
-          url: "#",
-        },
-        {
-          title: "Quantum",
-          url: "#",
-        },
-      ],
+      title: "All Indexed URLs",
+      url: "/indexed-urls",
+      icon: Link,
+      isActive: true,
     },
     {
-      title: "Documentation",
-      url: "#",
-      icon: BookOpen,
-      items: [
-        {
-          title: "Introduction",
-          url: "#",
-        },
-        {
-          title: "Get Started",
-          url: "#",
-        },
-        {
-          title: "Tutorials",
-          url: "#",
-        },
-        {
-          title: "Changelog",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Settings",
-      url: "#",
-      icon: Settings2,
-      items: [
-        {
-          title: "General",
-          url: "#",
-        },
-        {
-          title: "Team",
-          url: "#",
-        },
-        {
-          title: "Billing",
-          url: "#",
-        },
-        {
-          title: "Limits",
-          url: "#",
-        },
-      ],
-    },
+      title: "Domains",
+      url: "/domains",
+      icon: Globe,
+      isActive: true,
+    }
   ],
   navSecondary: [
     {
-      title: "Support",
-      url: "#",
-      icon: LifeBuoy,
-    },
-    {
-      title: "Feedback",
-      url: "#",
-      icon: Send,
+      title: "Settings",
+      url: "/settings",
+      icon: Settings2,
     },
   ],
   projects: [
     {
-      name: "Design Engineering",
-      url: "#",
-      icon: Frame,
+      name: "Dashboard",
+      url: "/dashboard",
+      icon: Gauge ,
     },
     {
-      name: "Sales & Marketing",
-      url: "#",
+      name: "Data Table",
+      url: "/data-table",
       icon: PieChart,
     },
     {
-      name: "Travel",
+      name: "Failed URLs",
       url: "#",
-      icon: Map,
+      icon: OctagonX,
     },
   ],
 }
@@ -182,7 +108,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-              <a href="#">
+              <a href="/projects">
                 <div className="font-extrabold text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
                   <Image
                     src={logo}
@@ -212,8 +138,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         {!isProjectList && !isProjectDetail && (
           <NavMain items={data.navMain} />
         )}
+       <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
-      
       <SidebarFooter>
         <NavUser user={userData} />
       </SidebarFooter>

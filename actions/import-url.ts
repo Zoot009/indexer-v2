@@ -9,9 +9,14 @@ type ActionResponse<T> = {
     error?: string;
 };
 
+interface UrlWithAnchor {
+    url: string;
+    anchorText?: string;
+}
+
 export async function importUrls(
     projectId: string,
-    urls: string[]
+    urls: (string | UrlWithAnchor)[]
 ): Promise<ActionResponse<{ imported: number; total: number }>> {
     try {
         if (!projectId) {
@@ -32,17 +37,23 @@ export async function importUrls(
 
         const indexedUrlArray = indexedUrls.map((u) => u.url);
 
+        // Normalize URLs to objects with anchorText
+        const normalizedUrls: UrlWithAnchor[] = urls.map((u) => 
+            typeof u === 'string' ? { url: u } : u
+        );
+
         // Filter out already indexed URLs
-        const filteredUrls = urls.filter((u) => !indexedUrlArray.includes(u));
+        const filteredUrls = normalizedUrls.filter((u) => !indexedUrlArray.includes(u.url));
 
         // Normalize and prepare data
         const data = filteredUrls
-            .filter((u) => !!u)
+            .filter((u) => !!u.url)
             .map((u) => {
-                const url = new URL(u);
+                const url = new URL(u.url);
                 return {
                     url: url.toString(),
                     domain: url.hostname,
+                    anchorText: u.anchorText || null,
                     projectId,
                 };
             });
@@ -51,27 +62,42 @@ export async function importUrls(
         const uniqueDomains = Array.from(new Set(data.map((d) => d.domain)));
         if (uniqueDomains.length > 0) {
             await prisma.domain.createMany({
-                data: uniqueDomains.map((domain) => ({ domain, projectId })),
+                data: uniqueDomains.map((domain) => ({ domain })),
                 skipDuplicates: true,
             });
         }
 
-        // Fetch domain IDs to link URLs
+        // Fetch domain IDs
         const domainRecords = await prisma.domain.findMany({
             where: {
                 domain: { in: uniqueDomains },
-                projectId,
             },
             select: { id: true, domain: true },
         });
 
         const domainMap = new Map(domainRecords.map((d) => [d.domain, d.id]));
 
-        // Create URLs with domainId
+        // Create ProjectDomain relationships
+        const projectDomainData = uniqueDomains
+            .map((domain) => ({
+                projectId,
+                domainId: domainMap.get(domain)!,
+            }))
+            .filter((pd) => pd.domainId);
+
+        if (projectDomainData.length > 0) {
+            await prisma.projectDomain.createMany({
+                data: projectDomainData,
+                skipDuplicates: true,
+            });
+        }
+
+        // Create URLs with domainId and anchorText
         const urlsToCreate = data.map((d) => ({
             url: d.url,
             projectId,
             domainId: domainMap.get(d.domain)!,
+            anchorText: d.anchorText,
         }));
 
         const result = await prisma.url.createMany({

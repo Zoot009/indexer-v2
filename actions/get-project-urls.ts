@@ -56,11 +56,11 @@ export async function getProjectUrls(
       orderBy: { [sortBy]: sortOrder },
       skip: (page - 1) * pageSize,
       take: pageSize,
-    });
-
-    const domains = await prisma.domain.findMany({
-      where: { projectId },
-      select: { domain: true },
+      include: {
+        domainData: {
+          select: { domain: true },
+        },
+      },
     });
 
     const formatedUrls = urls.map((url) => ({
@@ -70,7 +70,7 @@ export async function getProjectUrls(
       isIndexed: url.isIndexed,
       createdAt: url.createdAt,
       updatedAt: url.updatedAt,
-      domain: domains.find((d) => url.url.includes(d.domain))?.domain || "",
+      domain: url.domainData?.domain || "",
     }));
 
     return {
